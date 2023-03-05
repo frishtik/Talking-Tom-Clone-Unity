@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static SpeechRecognizerPlugin;
 
 enum PlayerState
 {
@@ -10,13 +11,16 @@ enum PlayerState
 }
 
 [RequireComponent(typeof(AudioSource))]
-public class GameController : MonoBehaviour {
+public class GameController : MonoBehaviour, ISpeechRecognizerPlugin {
 
 	private Animator _playerAnimator;
 	private PlayerState _playerState = PlayerState.Idle;
 	private AudioSource _audioSource;
 
 	private float[] _clipSampleData;
+
+
+	private SpeechRecognizerPlugin plugin = null;
 
 	// Use this for initialization
 	void Start () {
@@ -44,6 +48,39 @@ public class GameController : MonoBehaviour {
 			SwitchState();
 		}
 	}
+
+
+
+	public void OnResult(string recognizedResult)
+	{
+		char[] delimiterChars = { '~' };
+		string[] results = recognizedResult.Split(delimiterChars);
+
+		foreach (string result in results)
+		{
+			Debug.Log("Recognized Result: " + result);
+		}
+	}
+
+	public void OnError(string recognizedError)
+	{
+		ERROR error = (ERROR)int.Parse(recognizedError);
+		switch (error)
+		{
+			case ERROR.UNKNOWN:
+				Debug.Log("<b>ERROR: </b> Unknown");
+				break;
+			case ERROR.INVALID_LANGUAGE_FORMAT:
+				Debug.Log("<b>ERROR: </b> Language format is not valid");
+				break;
+			default:
+				break;
+		}
+	}
+
+
+
+
 
 	private bool IsVolumeAboveThresold()
 	{
@@ -122,9 +159,10 @@ public class GameController : MonoBehaviour {
 		{
 			_playerAnimator.SetTrigger(GameConstants.MecanimListen);
 
-			_audioSource.clip = Microphone.Start(GameConstants.MicrophoneDeviceName /*null*/, false, GameConstants.RecordingLength/*5*/, GameConstants.RecordingFrequency/*44100*/);
+			//_audioSource.clip = Microphone.Start(GameConstants.MicrophoneDeviceName /*null*/, false, GameConstants.RecordingLength/*5*/, GameConstants.RecordingFrequency/*44100*/);
+			plugin.StartListening(true);
 			Invoke("SwitchState", GameConstants.RecordingLength/*5 sec*/);
-		}	
+		}
 	}
 
 
@@ -141,7 +179,7 @@ public class GameController : MonoBehaviour {
 		{
 			_playerAnimator.SetTrigger(GameConstants.MecanimTalk);
 
-			Microphone.End(null);
+			//Microphone.End(null);
 			if(_audioSource.clip != null)
 			{
 				_audioSource.Play();
